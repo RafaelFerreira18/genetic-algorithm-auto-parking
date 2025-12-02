@@ -40,7 +40,7 @@ class Trajectory:
         self.xf, self.yf, self.thetaf = xf, yf, thetaf
         self.k0, self.k1, self.Vs = k0, k1, Vs
         self.num_points = num_points
-        
+
         self._generate_trajectory()
     
     def _generate_trajectory(self):
@@ -93,7 +93,7 @@ class Trajectory:
                 kappa = numerator / denominator
                 V = np.sqrt(dx_ds**2 + dy_ds**2)
                 if V > 1e-10:
-                    self.phi_array[i] = np.arctan(VehicleParams.L * kappa / V)
+                    self.phi_array[i] = np.arctan(VehicleParams.L * kappa / V) # Aproximação ds/dt
                 else:
                     self.phi_array[i] = 0
             else:
@@ -104,9 +104,6 @@ class Trajectory:
             dy = self.y_array[i] - self.y_array[i-1]
             self.length += np.sqrt(dx**2 + dy**2)
     
-    def get_final_pose(self) -> Tuple[float, float, float]:
-        return self.x_array[-1], self.y_array[-1], self.theta_array[-1]
-    
     def get_max_phi(self) -> float:
         return np.max(np.abs(self.phi_array))
 
@@ -114,26 +111,60 @@ class Trajectory:
 class ObstacleDetector:
     def __init__(self, obstacles: List[Tuple[float, float, float, float]]):
         self.obstacles = obstacles
-    
-    def check_collision(self, x: float, y: float, theta: float) -> bool:
-        if not self.obstacles:
-            return False
         
-        A, W = VehicleParams.A, VehicleParams.W
-        corners = [
-            (-0.5, -W/2), (A-0.5, -W/2),
-            (A-0.5, W/2), (-0.5, W/2)
+        self.DP = 1e9
+        A = VehicleParams.A
+        B = VehicleParams.B
+        
+        self.r_side = np.sqrt((self.DP + B)**2 + (A/2)**2)
+        self.r_front_back = np.sqrt((self.DP + A)**2 + (B/2)**2)
+        
+        self.centers_local = [
+            (0.0, -(self.DP + B/2)),
+            (0.0, +(self.DP + B/2)),
+            (-(self.DP + A/2), 0.0),
+            (+(self.DP + A/2), 0.0)
         ]
         
-        cos_t, sin_t = np.cos(theta), np.sin(theta)
-        for corner in corners:
-            cx = x + corner[0] * cos_t - corner[1] * sin_t
-            cy = y + corner[0] * sin_t + corner[1] * cos_t
+        self.radii = [self.r_side, self.r_side, self.r_front_back, self.r_front_back]
+
+    def _dist_point_rect(self, px, py, rx_min, ry_min, rx_max, ry_max):
+        """Distância euclidiana mínima de um ponto a um retângulo."""
+        closest_x = max(rx_min, min(px, rx_max))
+        closest_y = max(ry_min, min(py, ry_max))
+        dx = px - closest_x
+        dy = py - closest_y
+        return np.sqrt(dx*dx + dy*dy)
+
+    def check_collision(self, x_veh: float, y_veh: float, theta_veh: float) -> bool:
+    
+        if not self.obstacles:
+            return False
             
-            for obs in self.obstacles:
-                if obs[0] <= cx <= obs[2] and obs[1] <= cy <= obs[3]:
-                    return True
+        cos_t = np.cos(theta_veh)
+        sin_t = np.sin(theta_veh)
         
+        for obs in self.obstacles:
+            ox_min, oy_min, ox_max, oy_max = obs
+            
+            is_collision_candidate = True
+            
+            for i in range(4):
+                lx, ly = self.centers_local[i]
+                r = self.radii[i]
+                
+                px_global = x_veh + (lx * cos_t - ly * sin_t)
+                py_global = y_veh + (lx * sin_t + ly * cos_t)
+                
+                dist = self._dist_point_rect(px_global, py_global, ox_min, oy_min, ox_max, oy_max)
+                
+                if dist > r:
+                    is_collision_candidate = False
+                    break 
+            
+            if is_collision_candidate:
+                return True
+                
         return False
     
     def count_collisions(self, trajectory: Trajectory) -> int:
@@ -244,7 +275,7 @@ class GeneticAlgorithm:
             fo = np.sqrt(S**2 + phi_max**2)
             
             return fo
-            
+        
         except Exception as e:
             return float('inf')
     
@@ -369,7 +400,7 @@ def plot_trajectory(traj: Trajectory, title: str,
     
     ax.set_xlabel('X (m)')
     ax.set_ylabel('Y (m)')
-    ax.set_title('Trajetória: x(s) e y(s) polinomiais de 5ª ordem')
+    ax.set_title('Trajetória (Detecção via 4 Círculos)')
     ax.legend()
     ax.grid(True)
     ax.axis('equal')
@@ -411,9 +442,7 @@ Métricas:
 Comprimento |S| = {traj.length:.3f} m
 |φ|_max = {np.max(np.abs(phi_deg)):.2f}°
 """
-    
-    ax.text(0.1, 0.5, info, fontsize=12, family='monospace',
-            verticalalignment='center')
+    ax.text(0.1, 0.5, info, fontsize=12, family='monospace', verticalalignment='center')
     
     plt.tight_layout()
     plt.savefig(f'{title.replace(" ", "_")}.png', dpi=150)
@@ -424,16 +453,11 @@ def parallel_parking_article():
     print("\n" + "="*70)
     print("ESTACIONAMENTO PARALELO - ALGORITMO EXATO DO ARTIGO")
     print("="*70)
-    print("\n[IMPLEMENTACAO CORRETA:]")
-    print("  * x(s) e y(s) como polinomios de 5a ordem em s (Equacoes 32-33)")
-    print("  * 4 condicoes de contorno (Equacoes 37-40)")
-    print("  * Genes: k0, k1 em [1,50], Vs em {-1,1}")
-    print("  * Representacao binaria (32+32+1 bits)")
-    print("  * Selecao por roleta (Tabela III)")
-    print("  * Crossover de 1 ponto: 60%")
-    print("  * Mutacao bit-flip: 4%")
-    print("  * Fitness: fo = raiz(|S|^2 + |phi|_max^2)")
-    print("  * Penalidade: |S| x 100 se colisao")
+    print("\n[IMPLEMENTACAO METODOLOGICA:]")
+    print("  * Otimização: Algoritmo Genético (AG)")
+    print("  * Trajetória: Polinômios de 5ª ordem (Quintic) em s(t)")
+    print("  * Detecção Colisão: 4 Círculos Gigantes (Eq. 15-18 - Método Analítico)")
+    print("  * Genes: k0, k1, Vs")
     print("="*70)
     
     x0, y0, theta0 = 2.0, 1.8, np.pi
@@ -448,7 +472,7 @@ def parallel_parking_article():
     
     print(f"\nPose Inicial: ({x0:.2f}, {y0:.2f}, {np.rad2deg(theta0):.1f}°)")
     print(f"Pose Target:  ({x_target:.2f}, {y_target:.2f}, {np.rad2deg(theta_target):.1f}°)")
-    print(f"\nExecutando AG...\n")
+    print(f"\nExecutando AG com Detecção por 4 Círculos (DP=1e9)...\n")
     
     ga = GeneticAlgorithm(x0, y0, theta0, x_target, y_target, theta_target, obstacles)
     best = ga.run(verbose=True)
@@ -461,46 +485,45 @@ def parallel_parking_article():
     xf, yf, thetaf = traj.x_array[-1], traj.y_array[-1], traj.theta_array[-1]
     phi_max_deg = np.max(np.abs(np.degrees(traj.phi_array)))
     
-    print(f"Fitness: {best.fitness:.4f}")
-    print(f"Comprimento |S|: {traj.length:.3f} m")
-    print(f"|phi|_max: {phi_max_deg:.2f} graus [limite: {VehicleParams.phi_max_deg} graus]")
-    print(f"Pose final: ({xf:.3f}, {yf:.3f}, {np.rad2deg(thetaf):.1f} graus)")
-    print(f"Erro posicao: {np.sqrt((xf-x_target)**2 + (yf-y_target)**2):.3f} m")
+    print(f"Fitness (Minimizado): {best.fitness:.4f}")
+    print(f"Comprimento da Trajetória |S|: {traj.length:.3f} m")
+    print(f"Ângulo de Esterçamento Máx |φ|_max: {phi_max_deg:.2f} graus [limite: {VehicleParams.phi_max_deg} graus]")
+    
+    print(f"\nValidação da Pose Final:")
+    print(f"  Desejado: ({x_target:.3f}, {y_target:.3f}, {np.rad2deg(theta_target):.1f}°)")
+    print(f"  Obtido:   ({xf:.3f}, {yf:.3f}, {np.rad2deg(thetaf):.1f}°)")
+    
+    error_pos = np.sqrt((xf-x_target)**2 + (yf-y_target)**2)
     
     dtheta = thetaf - theta_target
-    while dtheta > np.pi:
-        dtheta -= 2*np.pi
-    while dtheta < -np.pi:
-        dtheta += 2*np.pi
-    print(f"Erro orientacao: {np.rad2deg(abs(dtheta)):.1f} graus")
+    while dtheta > np.pi: dtheta -= 2*np.pi
+    while dtheta < -np.pi: dtheta += 2*np.pi
+    error_theta = np.rad2deg(abs(dtheta))
     
-    print(f"\nGenes (Equacoes 37-40):")
+    print(f"  Erro Posição: {error_pos:.3e} m")
+    print(f"  Erro Orientação: {error_theta:.3e} graus")
+    
+    print(f"\nMelhores Genes Encontrados (Parâmetros da Curva):")
     print(f"  k0 = {best.k0:.3f}")
     print(f"  k1 = {best.k1:.3f}")
-    print(f"  Vs = {best.Vs:+d}")
+    print(f"  Vs = {best.Vs:+d} (1=Frente, -1=Ré)")
     
-    num_col = sum(
-        1 for i in range(len(traj.x_array))
-        if ga.obstacle_detector.check_collision(traj.x_array[i], traj.y_array[i], traj.theta_array[i])
-    )
-    print(f"\nColisoes: {num_col}/{len(traj.x_array)} pontos ({100*num_col/len(traj.x_array):.1f}%)")
+    num_col = ga.obstacle_detector.count_collisions(traj)
+    print(f"\nVerificação de Segurança:")
+    print(f"  Colisões Detectadas: {num_col}/{len(traj.x_array)} pontos ({100*num_col/len(traj.x_array):.1f}%)")
     
-    plot_trajectory(traj, "Estacionamento_Paralelo_Artigo",
+    plot_trajectory(traj, "Estacionamento_Paralelo_Final",
                    x0, y0, x_target, y_target, parking_space, obstacles)
+    
     plt.figure(figsize=(10, 6))
     plt.plot(ga.best_fitness_history, 'b-', linewidth=2)
-    plt.xlabel('Geracao')
+    plt.xlabel('Geração')
     plt.ylabel('Melhor Fitness (fo)')
-    plt.title('Convergencia do AG - fo = raiz(|S|^2 + |phi|_max^2)')
+    plt.title('Convergência do AG (Minimização)')
     plt.grid(True)
     plt.yscale('log')
-    plt.savefig('Convergencia_AG.png', dpi=150)
+    plt.savefig('Convergencia_AG_Final.png', dpi=150)
     plt.show()
 
-
 if __name__ == "__main__":
-    print("="*70)
-    print("IMPLEMENTACAO EXATA DO ARTIGO CIENTIFICO")
-    print("Vieira, Argento & Revoredo")
-    print("="*70)
     parallel_parking_article()
