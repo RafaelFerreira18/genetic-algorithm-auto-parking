@@ -1,17 +1,49 @@
 # Planejamento de Trajetórias para Estacionamento Paralelo
 
-## Descrição
+## 🎯 Descrição
 Implementação do algoritmo genético para planejamento de trajetórias de estacionamento paralelo autônomo para robôs móveis do tipo carro (CLMR).
 
 **Artigo Base:** "Trajectory Planning For Car-like Robots Through Curve Parametrization And Genetic Algorithm Optimization With Applications To Autonomous Parking"
 
 **Autores:** Renan P. Vieira, Eduardo V. Argento e Téo C. Revoredo
 
-## Equipe
-- [Seu Nome]
-- [Outros membros]
+## 👥 Equipe
+- Rafael Ferreira, Stênio Gabriel Botelho do Carmo, Renato Xavier Portela Giordano e Thiago Rosa da Silva
 
-## Algoritmo
+## ⭐ NOVIDADE: Versão com Lógica Fuzzy (Bônus)
+
+Este projeto inclui uma **versão híbrida AG + Lógica Fuzzy** que qualifica para bônus (+1.0 ponto).
+
+### 🚀 Execução Rápida
+```bash
+# Instalar dependências
+pip install numpy matplotlib scikit-fuzzy networkx
+
+# Comparar AG padrão vs AG + Fuzzy
+python comparison.py
+```
+
+### 📚 Documentação Completa
+- **[CHECKLIST_VALIDACAO.md](CHECKLIST_VALIDACAO.md)** - Verificação do bônus (3 min)
+- **[RESUMO_BONUS.md](RESUMO_BONUS.md)** - Resumo executivo
+- **[README_FUZZY.md](README_FUZZY.md)** - Documentação completa
+- **[DETALHAMENTO_TECNICO_FUZZY.md](DETALHAMENTO_TECNICO_FUZZY.md)** - Aprofundamento técnico
+- **[GUIA_PRATICO.md](GUIA_PRATICO.md)** - Como usar
+- **[APRESENTACAO.md](APRESENTACAO.md)** - Slides para apresentação
+
+## 📁 Estrutura do Projeto
+
+### Código Principal
+1. **`genetic_parking_article.py`** - Implementação exata do artigo (baseline)
+2. **`genetic_parking_fuzzy.py`** ⭐ - Versão com Lógica Fuzzy (bônus)
+3. **`comparison.py`** - Comparação lado a lado
+
+### Visualizações Geradas
+- `Comparacao_AG_vs_Fuzzy.png` - Comparação completa (7 subplots)
+- `Estacionamento_Fuzzy.png` - Trajetória fuzzy
+- `Convergencia_Fuzzy.png` - Evolução fuzzy
+
+## 🧬 Algoritmo
 Combina parametrização polinomial de 5ª ordem com otimização por algoritmo genético para gerar trajetórias suaves e contínuas.
 
 ### Parâmetros do Algoritmo Genético (Tabela III do artigo)
@@ -31,22 +63,33 @@ Combina parametrização polinomial de 5ª ordem com otimização por algoritmo 
 - V_max = 1 m/s
 - V̇_max = 0.5 m/s²
 
-## Instruções de Execução
+## 🚀 Instruções de Execução
 
 ### Requisitos
 ```bash
+# Para versão padrão
 pip install numpy matplotlib
+
+# Para versão fuzzy (inclui padrão)
+pip install numpy matplotlib scikit-fuzzy networkx
 ```
 
-### Executar
+### Executar Versão Padrão (Artigo)
 ```bash
-python genetic_parking.py
+python genetic_parking_article.py
 ```
 
-### Opções
-1. Estacionamento Paralelo de Frente
-2. Estacionamento Paralelo de Ré
-3. Ambos
+### Executar Versão Fuzzy (Bônus)
+```bash
+python genetic_parking_fuzzy.py
+```
+
+### Executar Comparação (Recomendado)
+```bash
+python comparison.py
+```
+
+Este último script executa ambas versões e gera comparação visual e numérica.
 
 ## Resultados Esperados
 O algoritmo deve gerar trajetórias comparáveis aos resultados da Tabela IV do artigo:
