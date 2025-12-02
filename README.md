@@ -10,10 +10,6 @@ Implementação do algoritmo genético para planejamento de trajetórias de esta
 ## 👥 Equipe
 - Rafael Ferreira, Stênio Gabriel Botelho do Carmo, Renato Xavier Portela Giordano e Thiago Rosa da Silva
 
-## ⭐ NOVIDADE: Versão com Lógica Fuzzy (Bônus)
-
-Este projeto inclui uma **versão híbrida AG + Lógica Fuzzy** que qualifica para bônus (+1.0 ponto).
-
 ### 🚀 Execução Rápida
 ```bash
 # Instalar dependências
@@ -22,14 +18,6 @@ pip install numpy matplotlib scikit-fuzzy networkx
 # Comparar AG padrão vs AG + Fuzzy
 python comparison.py
 ```
-
-### 📚 Documentação Completa
-- **[CHECKLIST_VALIDACAO.md](CHECKLIST_VALIDACAO.md)** - Verificação do bônus (3 min)
-- **[RESUMO_BONUS.md](RESUMO_BONUS.md)** - Resumo executivo
-- **[README_FUZZY.md](README_FUZZY.md)** - Documentação completa
-- **[DETALHAMENTO_TECNICO_FUZZY.md](DETALHAMENTO_TECNICO_FUZZY.md)** - Aprofundamento técnico
-- **[GUIA_PRATICO.md](GUIA_PRATICO.md)** - Como usar
-- **[APRESENTACAO.md](APRESENTACAO.md)** - Slides para apresentação
 
 ## 📁 Estrutura do Projeto
 
